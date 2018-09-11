@@ -3,8 +3,12 @@ from tabulate import tabulate
 import os
 import glob
 import re
+import argparse
+
 
 def get_artist(artist_years):
+    """gets just the artist
+    """
     try:
         return " (".join(artist_years.split(" (")[:-1])
     except AttributeError:
@@ -62,6 +66,7 @@ class Counter:
         self.min_2_index = 0
     
     def count(self):
+        # pretty much just going (0,0),(1,0),(0,1),(1,1),(2,0),(0,2),(2,1)...etc
         if self.min_1_index > 10 or self.min_2_index > 10:
             raise Exception('got to big')
         if self.min_1_index == self.min_2_index:
@@ -81,7 +86,12 @@ class Counter:
         return self.min_1_index, self.min_2_index
 
 def get_data():
-    files = glob.glob('../data/*.csv')
+    """gets the data from the csvs and does some formatting
+    """
+    ### if prod would just add the data to sql instead of csv
+    file_path = os.path.dirname(os.path.abspath(__file__))
+    glob_folder = os.path.join(file_path,'..','data','*.csv')
+    files = glob.glob(glob_folder)
     df = []
     artists = []
     for f in files:
@@ -98,6 +108,7 @@ def get_data():
     df['size1'] = df['size'].apply(lambda x:float_0(x.split('x')[0]))
     df['size2'] = df['size'].apply(lambda x:float_0(x.split('x')[1]))
     df['price'] = [''.join(re.findall("\d+", item)) for item in df['sold_price']]
+    ## if prod dont hard code this
     df['month'] = ['nov 2017' if '27400' in x else 'feb 2018' for x in df['auction_file']]
     return df
 
@@ -106,12 +117,14 @@ def print_groups(x_diff, debug=False):
     data = []
     group_data = []
     for artist in pd.unique(df['artist']).tolist():
-        print(artist)
         objects = df.loc[df['artist'] == artist]
         n_objects = len(objects)
         n_objects_left = n_objects   
         group_no = 0
         while n_objects_left !=0:
+            ## right now just grouping the objects in an easy way
+            ## if prod would lke to standardize groups 
+            ## so the numbers between artist would be more meaningful
             counter = Counter()
             min_1_index, min_2_index = 0,0
             current_min_1 = objects['size1'].nsmallest(min_1_index+1).iat[min_1_index]
@@ -120,9 +133,7 @@ def print_groups(x_diff, debug=False):
             group_dat = {}
             current_group = objects.loc[(objects['size1']>=current_min_1) & (objects['size1']<=current_min_1+2*x_diff)
             & (objects['size2']>=current_min_2) & (objects['size2']<=current_min_2+2*x_diff)]
-            print(current_min_1, current_min_2)
             while len(current_group)==0:
-                print(min_1_index, min_2_index)
                 min_1_index, min_2_index = counter.count()
                 try:
                     current_min_1 = objects['size1'].nsmallest(min_1_index+1).iat[min_1_index]
@@ -152,13 +163,23 @@ def print_groups(x_diff, debug=False):
     ## decided to make debug a variable since the extra data was too much 
     ##to print nicely
     if debug == True:
-        print tabulate(data, headers='keys', tablefmt='psql')
-    print tabulate(data, headers='keys', tablefmt='psql')
+        print tabulate(data, headers='keys', tablefmt='psql', showindex=False)
+    print tabulate(data, headers='keys', tablefmt='psql', showindex=False)
 
+
+def main():
+
+    parser = argparse.ArgumentParser(description="prints the sell vales from similar objects from nov2017 and feb2018")
+    parser.add_argument('-tol', '--tolerance', type=float, required=True, help="the range for similar objects", dest='x_diff')
+    ## no debugging by default
+    parser.add_argument('-d', '--debug', type=bool, default=False, required=False)
+    args = parser.parse_args()
+    print(args)
+    print_groups(args.x_diff, debug=False)
+    
 
 if __name__ == "__main__":
-    x = 10
-    print_groups(x, debug=False)
+    main()
     
 
 
