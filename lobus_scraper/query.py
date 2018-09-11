@@ -112,7 +112,7 @@ def get_data():
     df['month'] = ['nov 2017' if '27400' in x else 'feb 2018' for x in df['auction_file']]
     return df
 
-def print_groups(x_diff, debug=False):
+def print_groups(x_diff, debug):
     df = get_data()
     data = []
     group_data = []
@@ -163,7 +163,7 @@ def print_groups(x_diff, debug=False):
     ## decided to make debug a variable since the extra data was too much 
     ##to print nicely
     if debug == True:
-        print tabulate(data, headers='keys', tablefmt='psql', showindex=False)
+        print tabulate(group_data, headers='keys', tablefmt='psql', showindex=False)
     print tabulate(data, headers='keys', tablefmt='psql', showindex=False)
 
 
@@ -175,7 +175,7 @@ def main():
     parser.add_argument('-d', '--debug', type=bool, default=False, required=False)
     args = parser.parse_args()
     print(args)
-    print_groups(args.x_diff, debug=False)
+    print_groups(args.x_diff, debug=args.debug)
     
 
 if __name__ == "__main__":
